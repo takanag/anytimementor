@@ -61,7 +61,6 @@ export default function LoginForm() {
       console.log("マイページにリダイレクトします");
       // 直接的なリダイレクト（ブラウザの履歴を置き換える）
       window.location.href = "/mypage";
-
     } catch (err: any) {
       console.error("ログインエラー:", err);
       setError(

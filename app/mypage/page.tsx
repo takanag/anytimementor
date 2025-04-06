@@ -1,141 +1,201 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { useAuth } from "@/components/auth-provider"
-import ProtectedRoute from "@/components/protected-route"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import Image from "next/image";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { BookOpen, Calendar, Briefcase, BarChart3 } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
+import ProtectedRoute from "@/components/protected-route";
 
 export default function MyPage() {
-  const { user, isAuthenticated, isLoading } = useAuth()
-  const [userName, setUserName] = useState<string>("ユーザー")
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("MyPage: ページがロードされました", {
       url: window.location.href,
       time: new Date().toISOString(),
       isAuthenticated,
-      user: user ? { id: user.id, email: user.email } : null
-    })
+      user: user ? { id: user.id, email: user.email } : null,
+    });
 
-    // ユーザー名を設定（メールアドレスの@前の部分）
-    if (user?.email) {
-      const email = user.email
-      const name = email.split("@")[0] || "ユーザー"
-      setUserName(name)
+    // マイページにアクセスしたことを記録
+    if (typeof window !== "undefined") {
+      localStorage.setItem("hasVisitedMypage", "true");
     }
-  }, [user, isAuthenticated]) // userとisAuthenticatedが変更されたときに実行
 
-  // ProtectedRouteコンポーネントを使用して認証状態を管理
+    const fetchUserName = async () => {
+      if (user?.id) {
+        try {
+          // worksheet_analyticsテーブルからintroduction_nameを取得
+          const { data, error } = await supabase
+            .from("worksheet_analytics")
+            .select("introduction_name")
+            .eq("user_id", user.id)
+            .single();
+
+          if (error) {
+            console.error("ユーザー名の取得エラー:", error);
+          }
+
+          // introduction_nameが取得できた場合はそれを使用
+          if (data && data.introduction_name) {
+            setUserName(data.introduction_name);
+            return;
+          }
+        } catch (error) {
+          console.error("ユーザー名の取得中にエラーが発生しました:", error);
+        }
+      }
+
+      // worksheet_analyticsからintroduction_nameが取得できなかった場合は「ユーザーさん」を使用
+      setUserName("ユーザー");
+    };
+
+    if (isAuthenticated) {
+      fetchUserName();
+    }
+  }, [user, isAuthenticated]);
+
+  const modules = [
+    {
+      title: "やさしいキャリアデザイン",
+      description:
+        "内発的動機の発見を通した自律的キャリアを達成するための目標設定",
+      icon: <BookOpen className="h-8 w-8 text-gray-800" />,
+      href: "/worksheet/1",
+      color: "border-atm-gold",
+    },
+    {
+      title: "やさしいメンタリング",
+      description: "目標を実現するための週次でのふりかえり",
+      icon: <Calendar className="h-8 w-8 text-gray-800" />,
+      href: "/new-beginnings",
+      color: "border-atm-gold",
+    },
+    {
+      title: "社内タレントマーケットプレイス",
+      description:
+        "目標達成に必要な経験とスキルを習得できる業務・プロジェクトとのマッチング",
+      icon: <Briefcase className="h-8 w-8 text-gray-800" />,
+      href: "/marketplace",
+      color: "border-atm-gold",
+    },
+    {
+      title: "メンタリングダッシュボード",
+      description:
+        "メンタリングの対話や成果物からメンバーのモチベーションや成長度合いを把握",
+      icon: <BarChart3 className="h-8 w-8 text-gray-800" />,
+      href: "https://v0-any-time-mentor-dashboard-ut.vercel.app/dashboard",
+      color: "border-atm-gold",
+    },
+  ];
+
+  // ユーザー名の表示テキストを生成
+  const welcomeText = authLoading
+    ? "ようこそ"
+    : `ようこそ、${userName || "メンバー"}さん`;
+
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#f5f5eb]">
-        <header className="bg-white p-4 shadow-sm">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 className="text-2xl font-bold">やさしいメンタリング マイページ</h1>
-            <div className="flex items-center">
-              <img 
-                src="/placeholder-logo.png" 
-                alt="Any Time Mentor" 
-                className="h-12"
+      <div className="min-h-screen bg-atm-beige">
+        <header className="bg-white border-b border-atm-gold">
+          <div className="container mx-auto py-4 px-4 flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-800">
+              やさしいメンタリング マイページ
+            </h1>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1 border-gray-300 text-gray-700 hover:bg-gray-100"
+                onClick={() => {
+                  signOut();
+                  window.location.href = "/login";
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+                ログアウト
+              </Button>
+              <Image
+                src="/images/anytime-mentor-logo.jpeg"
+                alt="Any Time Mentor"
+                width={90}
+                height={30}
+                className="h-auto"
+                style={{ maxWidth: "90px" }}
+                priority
               />
             </div>
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto p-6">
+        <main className="container mx-auto py-8 px-4">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-2">ようこそ、{userName}さん</h2>
-            <p className="text-gray-700">あなたの自律的なキャリア形成と成長をサポートするツールにアクセスできます。</p>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">
+              {welcomeText}
+            </h2>
+            <p className="text-gray-600">
+              あなたの自律的なキャリア形成と成長をサポートするツールにアクセスできます。
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* やさしいキャリアデザイン */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-start mb-4">
-                <div className="bg-[#f5f5eb] p-2 rounded-md mr-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">やさしいキャリアデザイン</h3>
-                  <p className="text-gray-600 mt-2">内発的動機の発見を通した自律的キャリアを達成するための目標設定</p>
-                </div>
-              </div>
-              <Link href="/worksheet">
-                <button className="bg-[#d1c9a6] hover:bg-[#c2b990] text-black font-medium py-2 px-4 rounded">
-                  アクセスする
-                </button>
-              </Link>
-            </div>
-
-            {/* やさしいメンタリング */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-start mb-4">
-                <div className="bg-[#f5f5eb] p-2 rounded-md mr-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">やさしいメンタリング</h3>
-                  <p className="text-gray-600 mt-2">目標を実現するための週次でのふりかえり</p>
-                </div>
-              </div>
-              <Link href="/roadmap">
-                <button className="bg-[#d1c9a6] hover:bg-[#c2b990] text-black font-medium py-2 px-4 rounded">
-                  アクセスする
-                </button>
-              </Link>
-            </div>
-
-            {/* 社内タレントマーケットプレイス */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-start mb-4">
-                <div className="bg-[#f5f5eb] p-2 rounded-md mr-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">社内タレントマーケットプレイス</h3>
-                  <p className="text-gray-600 mt-2">目標達成に必要な経験とスキルを習得できる業務・プロジェクト</p>
-                </div>
-              </div>
-              <Link href="/marketplace">
-                <button className="bg-[#d1c9a6] hover:bg-[#c2b990] text-black font-medium py-2 px-4 rounded">
-                  アクセスする
-                </button>
-              </Link>
-            </div>
-
-            {/* メンタリングダッシュボード */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-start mb-4">
-                <div className="bg-[#f5f5eb] p-2 rounded-md mr-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <div className="flex justify-between w-full">
-                  <div>
-                    <h3 className="text-xl font-semibold">メンタリングダッシュボード</h3>
-                    <p className="text-gray-600 mt-2">メンタリングの進捗状況と効果の確認</p>
+            {modules.map((module, index) => (
+              <Card
+                key={index}
+                className={`h-full hover:shadow-md transition-shadow ${module.color}`}
+              >
+                <CardHeader className="border-b border-atm-gold/30 bg-atm-gold/10">
+                  <div className="flex items-center gap-4">
+                    {module.icon}
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-xl text-gray-800">
+                        {module.title}
+                      </CardTitle>
+                      {module.title === "メンタリングダッシュボード" && (
+                        <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 border border-red-200">
+                          管理者専用
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full h-fit">
-                    管理者専用
+                </CardHeader>
+                <CardContent className="pt-4 bg-white">
+                  <CardDescription className="text-gray-700 text-base">
+                    {module.description}
+                  </CardDescription>
+                  <div className="mt-4">
+                    <Link href={module.href}>
+                      <Button className="bg-atm-gold text-gray-800 hover:bg-atm-gold/90">
+                        アクセスする
+                      </Button>
+                    </Link>
                   </div>
-                </div>
-              </div>
-              <Link href="/admin/dashboard">
-                <button className="bg-[#d1c9a6] hover:bg-[#c2b990] text-black font-medium py-2 px-4 rounded">
-                  アクセスする
-                </button>
-              </Link>
-            </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </main>
+
+        <footer className="bg-white border-t border-atm-gold py-4 mt-8">
+          <div className="container mx-auto px-4 text-center text-sm text-gray-600">
+            © 2025 ANY TIME MENTOR やさしいメンタリング
+          </div>
+        </footer>
       </div>
     </ProtectedRoute>
-  )
+  );
 }

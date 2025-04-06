@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useWorksheet } from "@/context/worksheet-context" // 正しいパスを確認
 import WorksheetLayout from "@/components/worksheet-layout"
+import ProtectedRoute from "@/components/protected-route"
 import IntroductionWorksheet from "@/components/worksheets/introduction"
 import GuidanceWorksheet from "@/components/worksheets/guidance"
 import BiasWorksheet from "@/components/worksheets/bias"
@@ -172,7 +173,6 @@ export default function WorksheetPage() {
         toast({
           title: "注意",
           description: "サーバーへの保存に失敗しましたが、データはローカルに保存されました。",
-          variant: "warning",
         })
       } finally {
         setIsSaving(false)
@@ -228,14 +228,12 @@ export default function WorksheetPage() {
           toast({
             title: "自動モード切替",
             description: "接続問題が続いているため、ローカルストレージのみモードに切り替えました。",
-            variant: "warning",
           })
         } else {
           // それ以外のエラーの場合は通知
           toast({
             title: "保存の警告",
             description: saveResult.message,
-            variant: "warning",
           })
         }
       }
@@ -316,84 +314,84 @@ export default function WorksheetPage() {
   }
 
   return (
-    <WorksheetLayout
-      onNext={handleNext}
-      onPrevious={handlePrevious}
-      currentStep={currentStep}
-      totalSteps={8}
-      isStepCompleted={isStepCompleted}
-      onStepClick={handleStepClick} // 修正したhandleStepClick関数を渡す
-      isSaving={isSaving}
-      isOffline={!isOnline || isLocalStorageOnly}
-      isDevelopmentMode={true} // 開発モードフラグを追加
-    >
-      {/* オンライン/オフライン状態表示 */}
-      {(!isOnline || isLocalStorageOnly) && (
-        <div className="mb-4 p-2 rounded-md flex items-center bg-amber-50 text-amber-700">
-          <WifiOff className="h-4 w-4 mr-2" />
-          <span className="text-sm">
-            {isLocalStorageOnly
-              ? "ローカルストレージのみモード：データはローカルにのみ保存されます"
-              : "オフライン状態：データはローカルにのみ保存され、オンラインに戻ったときに同期されます"}
-          </span>
-        </div>
-      )}
-
-      {/* テストモード切り替えボタン */}
-      {currentStep === 8 && (
-        <div className="mb-4 p-2 rounded-md bg-gray-100">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">テストモード（入力チェックをスキップ）:</span>
-            <Button variant="outline" size="sm" onClick={toggleTestMode} className={isTestMode ? "bg-blue-100" : ""}>
-              {isTestMode ? "有効" : "無効"}
-            </Button>
+    <ProtectedRoute>
+      <WorksheetLayout
+        onNext={handleNext}
+        onPrevious={handlePrevious}
+        currentStep={currentStep}
+        totalSteps={8}
+        isStepCompleted={isStepCompleted}
+        onStepClick={handleStepClick} // 修正したhandleStepClick関数を渡す
+        isSaving={isSaving}
+        isOffline={!isOnline || isLocalStorageOnly}
+      >
+        {/* オンライン/オフライン状態表示 */}
+        {(!isOnline || isLocalStorageOnly) && (
+          <div className="mb-4 p-2 rounded-md flex items-center bg-amber-50 text-amber-700">
+            <WifiOff className="h-4 w-4 mr-2" />
+            <span className="text-sm">
+              {isLocalStorageOnly
+                ? "ローカルストレージのみモード：データはローカルにのみ保存されます"
+                : "オフライン状態：データはローカルにのみ保存され、オンラインに戻ったときに同期されます"}
+            </span>
           </div>
-          {isTestMode && (
-            <p className="text-xs text-gray-500 mt-1">
-              テストモードが有効です。入力チェックをスキップして次のステップに進むことができます。
+        )}
+
+        {/* テストモード切り替えボタン */}
+        {currentStep === 8 && (
+          <div className="mb-4 p-2 rounded-md bg-gray-100">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">テストモード（入力チェックをスキップ）:</span>
+              <Button variant="outline" size="sm" onClick={toggleTestMode} className={isTestMode ? "bg-blue-100" : ""}>
+                {isTestMode ? "有効" : "無効"}
+              </Button>
+            </div>
+            {isTestMode && (
+              <p className="text-xs text-gray-500 mt-1">
+                テストモードが有効です。入力チェックをスキップして次のステップに進むことができます。
+              </p>
+            )}
+          </div>
+        )}
+
+        {renderWorksheet()}
+
+        {/* 完了オプションの表示 */}
+        {showCompletionOptions && (
+          <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-lg">
+            <h3 className="text-xl font-bold text-green-800 mb-4">おめでとうございます！</h3>
+            <p className="mb-4">
+              すべてのワークシートを完了しました。データは正常に保存されました。
+              以下のボタンをクリックして、完了ページを表示してください。
             </p>
-          )}
-        </div>
-      )}
 
-      {renderWorksheet()}
+            <div className="flex flex-col sm:flex-row gap-4 mt-6">
+              {/* 同じタブで完了ページに遷移するように変更 */}
+              <Button
+                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                onClick={() => {
+                  router.push("/roadmap")
+                }}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                メンタリングの成果物を見る
+              </Button>
 
-      {/* 完了オプションの表示 */}
-      {showCompletionOptions && (
-        <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-lg">
-          <h3 className="text-xl font-bold text-green-800 mb-4">おめでとうございます！</h3>
-          <p className="mb-4">
-            すべてのワークシートを完了しました。データは正常に保存されました。
-            以下のボタンをクリックして、完了ページを表示してください。
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 mt-6">
-            {/* 同じタブで完了ページに遷移するように変更 */}
-            <Button
-              className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-              onClick={() => {
-                router.push("/roadmap")
-              }}
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              メンタリングの成果物を見る
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowCompletionOptions(false)
-                router.push("/worksheet/1")
-              }}
-              className="w-full sm:w-auto"
-            >
-              <ArrowRight className="mr-2 h-4 w-4" />
-              ステップ1に戻る
-            </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCompletionOptions(false)
+                  router.push("/worksheet/1")
+                }}
+                className="w-full sm:w-auto"
+              >
+                <ArrowRight className="mr-2 h-4 w-4" />
+                ステップ1に戻る
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
-    </WorksheetLayout>
+        )}
+      </WorksheetLayout>
+    </ProtectedRoute>
   )
 }
-

@@ -27,6 +27,8 @@ module.exports = {
           DEFAULT: "#C4BD97",
           foreground: "hsl(var(--primary-foreground))",
         },
+        "atm-beige": "#f5f5eb",
+        "atm-gold": "#d1c9a6",
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
@@ -75,4 +77,3 @@ module.exports = {
   },
   plugins: [require("tailwindcss-animate")],
 }
-

@@ -1,17 +1,80 @@
 "use client";
 
 import { useAuth } from "@/components/auth-provider";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requireAuth?: boolean;
 }
 
-export default function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteProps) {
+export default function ProtectedRoute({
+  children,
+  requireAuth = true,
+}: ProtectedRouteProps) {
   const { user, session, isLoading, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  // ミドルウェアでリダイレクト処理を行うため、ここではリダイレクト処理を行わない
+  // 保護されたルートのリスト（マイページ経由でのみアクセス可能）
+  const protectedPaths = ["/worksheet", "/new-beginnings", "/marketplace"];
+
+  // 認証状態とアクセス経路をチェック
+  useEffect(() => {
+    if (isLoading) return;
+
+    // 1. 認証チェック
+    if (requireAuth && !isAuthenticated) {
+      console.log(
+        "ProtectedRoute: 認証が必要ですが、認証されていません。ログインページにリダイレクトします。",
+        {
+          pathname,
+          user: user ? { id: user.id, email: user.email } : null,
+          session: session
+            ? { userId: session.user.id, email: session.user.email }
+            : null,
+          isAuthenticated,
+        }
+      );
+
+      // ログインページに直接リダイレクト
+      router.push("/login");
+      return;
+    }
+
+    // 2. 保護されたパスへのアクセス経路チェック（クライアントサイドのみ）
+    if (typeof window !== "undefined") {
+      // 現在のパスが保護されたパスかどうかをチェック
+      const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));
+      
+      if (isProtectedPath) {
+        // マイページを訪問したことがあるかチェック
+        const hasVisitedMypage = localStorage.getItem("hasVisitedMypage");
+        
+        // マイページを訪問したことがない場合、マイページにリダイレクト
+        if (!hasVisitedMypage) {
+          console.log(
+            "ProtectedRoute: 保護されたパスへのアクセスはマイページ経由のみ許可されています。マイページにリダイレクトします。",
+            {
+              pathname,
+              hasVisitedMypage,
+            }
+          );
+          
+          router.push("/mypage");
+        }
+      }
+    }
+  }, [
+    isLoading,
+    isAuthenticated,
+    requireAuth,
+    router,
+    pathname,
+    user,
+    session,
+  ]);
 
   if (isLoading) {
     return (
@@ -29,14 +92,9 @@ export default function ProtectedRoute({ children, requireAuth = true }: Protect
     return <>{children}</>;
   }
 
-  // 認証が必要なページで未認証の場合は何も表示しない
-  // ミドルウェアでリダイレクトされるため、ここでは何も表示しない
+  // 認証が必要なページで未認証の場合は、リダイレクト中の表示を返す
+  // useEffectでリダイレクト処理を行うため、ここでは一時的な表示を返す
   if (requireAuth && !isAuthenticated) {
-    console.log("ProtectedRoute: 認証が必要ですが、認証されていません", {
-      user: user ? { id: user.id, email: user.email } : null,
-      session: session ? { userId: session.user.id, email: session.user.email } : null,
-      isAuthenticated
-    });
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
